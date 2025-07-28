@@ -16,14 +16,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Advanced CSS styling for professional UI
+# FIXED: Enhanced CSS with proper dark text colors and corrected HTML structure
 st.markdown("""
 <style>
+    /* Global text color fix */
+    .main .block-container {
+        color: #2c3e50 !important;
+    }
+    
     .main-header {
         text-align: center;
         padding: 2rem 0;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        color: white !important;
         border-radius: 15px;
         margin-bottom: 2rem;
         box-shadow: 0 8px 32px rgba(0,0,0,0.1);
@@ -32,18 +37,25 @@ st.markdown("""
     .main-header h1 {
         font-size: 3rem;
         margin: 0;
+        color: white !important;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
     
     .main-header h3 {
         font-size: 1.2rem;
         margin: 0.5rem 0;
+        color: white !important;
+        opacity: 0.9;
+    }
+    
+    .main-header p {
+        color: white !important;
         opacity: 0.9;
     }
     
     .alert-critical {
         background: linear-gradient(135deg, #ff6b6b, #ee5a52);
-        color: white;
+        color: white !important;
         padding: 20px;
         border-radius: 10px;
         margin: 15px 0;
@@ -52,9 +64,13 @@ st.markdown("""
         animation: pulse 2s infinite;
     }
     
+    .alert-critical h3, .alert-critical p {
+        color: white !important;
+    }
+    
     .alert-warning {
         background: linear-gradient(135deg, #fdcb6e, #e17055);
-        color: white;
+        color: white !important;
         padding: 20px;
         border-radius: 10px;
         margin: 15px 0;
@@ -62,14 +78,22 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(253, 203, 110, 0.3);
     }
     
+    .alert-warning h3, .alert-warning p {
+        color: white !important;
+    }
+    
     .alert-safe {
         background: linear-gradient(135deg, #00b894, #00cec9);
-        color: white;
+        color: white !important;
         padding: 20px;
         border-radius: 10px;
         margin: 15px 0;
         border-left: 5px solid #00b894;
         box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
+    }
+    
+    .alert-safe h3, .alert-safe p {
+        color: white !important;
     }
     
     @keyframes pulse {
@@ -93,16 +117,19 @@ st.markdown("""
     .critical-category {
         background: linear-gradient(135deg, #ffebee, #ffcdd2);
         border-left: 5px solid #f44336;
+        color: #2c3e50 !important;
     }
     
     .warning-category {
         background: linear-gradient(135deg, #fff3e0, #ffe0b2);
         border-left: 5px solid #ff9800;
+        color: #2c3e50 !important;
     }
     
     .info-category {
         background: linear-gradient(135deg, #e3f2fd, #bbdefb);
         border-left: 5px solid #2196f3;
+        color: #2c3e50 !important;
     }
     
     .metric-container {
@@ -112,6 +139,17 @@ st.markdown("""
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         text-align: center;
         margin: 10px 0;
+        color: #2c3e50 !important;
+    }
+    
+    .metric-container h3 {
+        color: #2c3e50 !important;
+        margin: 0;
+    }
+    
+    .metric-container p {
+        color: #2c3e50 !important;
+        margin: 5px 0;
     }
     
     .status-indicator {
@@ -133,15 +171,25 @@ st.markdown("""
         margin: 15px 0;
         text-align: center;
         transition: transform 0.3s ease;
+        color: #2c3e50 !important;
     }
     
     .feature-box:hover {
         transform: translateY(-5px);
     }
     
+    .feature-box h3 {
+        color: #2c3e50 !important;
+        margin-bottom: 10px;
+    }
+    
+    .feature-box p {
+        color: #2c3e50 !important;
+    }
+    
     .audio-indicator {
         background: linear-gradient(135deg, #a29bfe, #6c5ce7);
-        color: white;
+        color: white !important;
         padding: 10px 20px;
         border-radius: 25px;
         display: inline-block;
@@ -152,6 +200,43 @@ st.markdown("""
     @keyframes audioWave {
         0%, 100% { transform: scale(1); }
         50% { transform: scale(1.05); }
+    }
+    
+    /* Fix for general text elements */
+    div[data-testid="stMarkdownContainer"] p {
+        color: #2c3e50 !important;
+    }
+    
+    /* Object detection result styling */
+    .object-item {
+        background: white;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        color: #2c3e50 !important;
+    }
+    
+    .footer-content {
+        text-align: center;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        padding: 30px;
+        border-radius: 15px;
+        margin: 20px 0;
+        color: #2c3e50 !important;
+    }
+    
+    .footer-content h2 {
+        color: #2c3e50 !important;
+        margin-bottom: 20px;
+    }
+    
+    .footer-content h4 {
+        color: #6c5ce7 !important;
+    }
+    
+    .footer-content p {
+        color: #636e72 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -430,24 +515,24 @@ def main():
                 st.markdown('''
                 <div style="background: #e8f5e8; padding: 10px; border-radius: 8px; margin: 10px 0;">
                     <span class="status-indicator status-online"></span>
-                    <strong>✅ Custom YOLOv8 Model Active</strong><br>
-                    <small>🎯 Optimized for navigation with 22 specialized classes</small>
+                    <strong style="color: #2c3e50;">✅ Custom YOLOv8 Model Active</strong><br>
+                    <small style="color: #2c3e50;">🎯 Optimized for navigation with 22 specialized classes</small>
                 </div>
                 ''', unsafe_allow_html=True)
             else:
                 st.markdown('''
                 <div style="background: #fff3e0; padding: 10px; border-radius: 8px; margin: 10px 0;">
                     <span class="status-indicator status-online"></span>
-                    <strong>⚠️ Using YOLOv8n Pretrained</strong><br>
-                    <small>Custom model not found, using fallback</small>
+                    <strong style="color: #2c3e50;">⚠️ Using YOLOv8n Pretrained</strong><br>
+                    <small style="color: #2c3e50;">Custom model not found, using fallback</small>
                 </div>
                 ''', unsafe_allow_html=True)
         else:
             st.markdown('''
             <div style="background: #ffebee; padding: 10px; border-radius: 8px; margin: 10px 0;">
                 <span class="status-indicator status-offline"></span>
-                <strong>❌ Model Not Available</strong><br>
-                <small>Detection system offline</small>
+                <strong style="color: #2c3e50;">❌ Model Not Available</strong><br>
+                <small style="color: #2c3e50;">Detection system offline</small>
             </div>
             ''', unsafe_allow_html=True)
         
@@ -566,32 +651,32 @@ def main():
             with col_a:
                 st.markdown(f'''
                 <div class="metric-container">
-                    <h3 style="color: #2c3e50; margin: 0;">{stats["total"]}</h3>
-                    <p style="margin: 5px 0;">Total Objects</p>
+                    <h3>{stats["total"]}</h3>
+                    <p>Total Objects</p>
                 </div>
                 ''', unsafe_allow_html=True)
             
             with col_b:
                 st.markdown(f'''
                 <div class="metric-container">
-                    <h3 style="color: #e74c3c; margin: 0;">{stats["critical"]}</h3>
-                    <p style="margin: 5px 0;">Critical</p>
+                    <h3 style="color: #e74c3c;">{stats["critical"]}</h3>
+                    <p>Critical</p>
                 </div>
                 ''', unsafe_allow_html=True)
             
             with col_c:
                 st.markdown(f'''
                 <div class="metric-container">
-                    <h3 style="color: #f39c12; margin: 0;">{stats["common"]}</h3>
-                    <p style="margin: 5px 0;">Common</p>
+                    <h3 style="color: #f39c12;">{stats["common"]}</h3>
+                    <p>Common</p>
                 </div>
                 ''', unsafe_allow_html=True)
             
             with col_d:
                 st.markdown(f'''
                 <div class="metric-container">
-                    <h3 style="color: #3498db; margin: 0;">{stats["contextual"]}</h3>
-                    <p style="margin: 5px 0;">Context</p>
+                    <h3 style="color: #3498db;">{stats["contextual"]}</h3>
+                    <p>Context</p>
                 </div>
                 ''', unsafe_allow_html=True)
             
@@ -599,8 +684,8 @@ def main():
                 confidence_pct = f"{stats['avg_confidence']*100:.1f}%" if stats['avg_confidence'] > 0 else "N/A"
                 st.markdown(f'''
                 <div class="metric-container">
-                    <h3 style="color: #27ae60; margin: 0;">{confidence_pct}</h3>
-                    <p style="margin: 5px 0;">Confidence</p>
+                    <h3 style="color: #27ae60;">{confidence_pct}</h3>
+                    <p>Confidence</p>
                 </div>
                 ''', unsafe_allow_html=True)
             
@@ -632,42 +717,61 @@ def main():
                         category_name = "Other"
                     
                     st.markdown(f'''
-                    <div style="background: white; padding: 10px; margin: 5px 0; border-radius: 8px; border-left: 4px solid {category_color}; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                        <strong>{category_icon} {obj.replace('_', ' ').title()}</strong> 
+                    <div class="object-item" style="border-left: 4px solid {category_color};">
+                        <strong style="color: #2c3e50;">{category_icon} {obj.replace('_', ' ').title()}</strong> 
                         <span style="color: {category_color};">({category_name})</span>
                         <span style="float: right; color: #7f8c8d;">Confidence: {confidence:.2f}</span>
                     </div>
                     ''', unsafe_allow_html=True)
     
-    # Enhanced footer with feature highlights
+    # FIXED: Enhanced footer with proper text colors (no raw HTML)
     st.markdown("---")
     st.markdown("""
-    <div style='text-align: center; background: linear-gradient(135deg, #f8f9fa, #e9ecef); padding: 30px; border-radius: 15px; margin: 20px 0;'>
-        <h2 style="color: #2c3e50; margin-bottom: 20px;">🚀 Nexus Vision Capabilities</h2>
-        
-        <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 30px 0;'>
-            <div class="feature-box">
-                <h3>🎯 Smart Detection</h3>
-                <p>22 specialized object classes optimized for navigation assistance and safety</p>
-            </div>
-            <div class="feature-box">
-                <h3>🔊 Audio Alerts</h3>
-                <p>Real-time text-to-speech announcements with priority-based navigation guidance</p>
-            </div>
-            <div class="feature-box">
-                <h3>🤖 AI-Powered</h3>
-                <p>Advanced YOLOv8 computer vision for accurate real-time object detection</p>
-            </div>
-            <div class="feature-box">
-                <h3>♿ Accessibility</h3>
-                <p>Designed specifically for visually impaired users with intuitive audio feedback</p>
-            </div>
+    <div class="footer-content">
+        <h2>🚀 Nexus Vision Capabilities</h2>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # FIXED: Use Streamlit columns instead of HTML grid for feature boxes
+    feat_col1, feat_col2, feat_col3, feat_col4 = st.columns(4)
+    
+    with feat_col1:
+        st.markdown("""
+        <div class="feature-box">
+            <h3>🎯 Smart Detection</h3>
+            <p>22 specialized object classes optimized for navigation assistance and safety</p>
         </div>
-        
-        <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.8); border-radius: 10px;">
-            <h4 style="color: #6c5ce7;">🌟 Empowering Independence Through AI</h4>
-            <p style="color: #636e72; font-style: italic;">Advanced computer vision technology making navigation safer and more accessible for everyone</p>
+        """, unsafe_allow_html=True)
+    
+    with feat_col2:
+        st.markdown("""
+        <div class="feature-box">
+            <h3>🔊 Audio Alerts</h3>
+            <p>Real-time text-to-speech announcements with priority-based navigation guidance</p>
         </div>
+        """, unsafe_allow_html=True)
+    
+    with feat_col3:
+        st.markdown("""
+        <div class="feature-box">
+            <h3>🤖 AI-Powered</h3>
+            <p>Advanced YOLOv8 computer vision for accurate real-time object detection</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with feat_col4:
+        st.markdown("""
+        <div class="feature-box">
+            <h3>♿ Accessibility</h3>
+            <p>Designed specifically for visually impaired users with intuitive audio feedback</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Final footer message
+    st.markdown("""
+    <div style="margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.8); border-radius: 10px; text-align: center;">
+        <h4 style="color: #6c5ce7;">🌟 Empowering Independence Through AI</h4>
+        <p style="color: #636e72; font-style: italic;">Advanced computer vision technology making navigation safer and more accessible for everyone</p>
     </div>
     """, unsafe_allow_html=True)
 
