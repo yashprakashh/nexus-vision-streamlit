@@ -1,7 +1,6 @@
 import streamlit as st
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
-import cv2
 from ultralytics import YOLO
 import os
 
@@ -40,6 +39,50 @@ tier1_objects = {'stairs', 'curb', 'car', 'bus', 'truck', 'bicycle'}
 tier2_objects = {'person', 'stop_sign', 'traffic_light', 'bench', 'fire_hydrant', 'pole'}
 tier3_objects = {'bus_stop', 'tree'}
 
+def draw_bounding_boxes(image, results):
+    """Draw bounding boxes on image using PIL (no OpenCV dependency)"""
+    try:
+        if isinstance(image, np.ndarray):
+            image = Image.fromarray(image)
+        
+        draw = ImageDraw.Draw(image)
+        
+        if results[0].boxes is not None:
+            for box in results[0].boxes:
+                # Get coordinates
+                coords = box.xyxy[0].tolist()
+                x1, y1, x2, y2 = coords
+                
+                # Get class info
+                class_id = int(box.cls.item())
+                confidence = float(box.conf.item())
+                
+                if class_id < len(class_names):
+                    class_name = class_names[class_id]
+                    
+                    # Determine color based on priority
+                    if class_name in tier1_objects:
+                        color = "red"
+                    elif class_name in tier2_objects:
+                        color = "orange"
+                    elif class_name in tier3_objects:
+                        color = "blue"
+                    else:
+                        color = "green"
+                    
+                    # Draw bounding box
+                    draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
+                    
+                    # Draw label
+                    label = f"{class_name}: {confidence:.2f}"
+                    draw.rectangle([x1, y1-20, x1+150, y1], fill=color)
+                    draw.text((x1+5, y1-18), label, fill="white")
+        
+        return np.array(image)
+    except Exception as e:
+        st.error(f"Error drawing boxes: {e}")
+        return np.array(image)
+
 def process_detection(image):
     """Process image and return results with priority-based messaging"""
     if model is None or image is None:
@@ -52,9 +95,8 @@ def process_detection(image):
         # Run YOLO inference
         results = model(img_array, conf=0.25)
         
-        # Get annotated image
-        annotated_image = results[0].plot()
-        annotated_image = cv2.cvtColor(annotated_image, cv2.COLOR_BGR2RGB)
+        # Draw bounding boxes using PIL (no OpenCV)
+        annotated_image = draw_bounding_boxes(img_array, results)
         
         # Extract detections
         detections = []
