@@ -194,12 +194,6 @@ st.markdown("""
         border-radius: 25px;
         display: inline-block;
         margin: 10px 0;
-        animation: audioWave 1.5s ease-in-out infinite;
-    }
-    
-    @keyframes audioWave {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
     }
     
     /* Fix for general text elements */
@@ -238,6 +232,26 @@ st.markdown("""
     .footer-content p {
         color: #636e72 !important;
     }
+
+    /* White text for specific elements */
+    div[data-testid="stMarkdownContainer"] em {
+        color: white !important;
+    }
+    
+    label[data-testid="stCameraInputLabel"] {
+        color: white !important;
+    }
+    
+    /* Target specific markdown text */
+    .main .block-container p em {
+        color: white !important;
+    }
+    
+    /* Camera input styling */
+    div[data-testid="stCameraInput"] + div p {
+        color: white !important;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -291,13 +305,13 @@ def fix_color_conversion(opencv_image):
     """FIXED: Properly convert OpenCV BGR to RGB for Streamlit"""
     try:
         if len(opencv_image.shape) == 3 and opencv_image.shape[2] == 3:
-            # Use OpenCV's proper color conversion instead of array slicing
-            rgb_image = cv2.cvtColor(opencv_image, cv2.COLOR_BGR2RGB)
+            # FIXED: Ensure we're working with the right data type and proper conversion
+            rgb_image = cv2.cvtColor(opencv_image.astype(np.uint8), cv2.COLOR_BGR2RGB)
             return rgb_image
-        return opencv_image
+        return opencv_image.astype(np.uint8)
     except Exception as e:
         print(f"Color conversion error: {e}")
-        return opencv_image
+        return opencv_image.astype(np.uint8)
 
 def generate_audio_alert(message, lang='en'):
     """Generate audio from text message using gTTS"""
