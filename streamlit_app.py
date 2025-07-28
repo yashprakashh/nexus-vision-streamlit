@@ -40,91 +40,154 @@ tier2_objects = {'person', 'stop_sign', 'traffic_light', 'bench', 'fire_hydrant'
 tier3_objects = {'bus_stop', 'tree'}
 
 def draw_bounding_boxes(image, results):
-    """Draw bounding boxes on image using PIL (no OpenCV dependency)"""
+    """Draw bounding boxes on image using PIL with robust error handling"""
     try:
         if isinstance(image, np.ndarray):
             image = Image.fromarray(image)
         
         draw = ImageDraw.Draw(image)
         
-        if results[0].boxes is not None:
-            for box in results[0].boxes:
-                # Get coordinates
-                coords = box.xyxy[0].tolist()
-                x1, y1, x2, y2 = coords
-                
-                # Get class info
-                class_id = int(box.cls.item())
-                confidence = float(box.conf.item())
-                
-                if class_id < len(class_names):
-                    class_name = class_names[class_id]
-                    
-                    # Determine color based on priority
-                    if class_name in tier1_objects:
-                        color = "red"
-                    elif class_name in tier2_objects:
-                        color = "orange"
-                    elif class_name in tier3_objects:
-                        color = "blue"
+        # Check if results exist and have boxes
+        if not results or len(results) == 0:
+            return np.array(image)
+        
+        result = results[0]  # Get first result
+        
+        # Check if boxes exist
+        if not hasattr(result, 'boxes') or result.boxes is None:
+            return np.array(image)
+        
+        boxes = result.boxes
+        
+        # Handle different box formats
+        if hasattr(boxes, 'xyxy') and boxes.xyxy is not None and len(boxes.xyxy) > 0:
+            for i, box in enumerate(boxes.xyxy):
+                try:
+                    # Get coordinates - handle both tensor and list formats
+                    if hasattr(box, 'tolist'):
+                        coords = box.tolist()
                     else:
-                        color = "green"
+                        coords = box
                     
-                    # Draw bounding box
-                    draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
-                    
-                    # Draw label
-                    label = f"{class_name}: {confidence:.2f}"
-                    draw.rectangle([x1, y1-20, x1+150, y1], fill=color)
-                    draw.text((x1+5, y1-18), label, fill="white")
+                    if len(coords) >= 4:
+                        x1, y1, x2, y2 = coords[:4]
+                        
+                        # Get class info
+                        if hasattr(boxes, 'cls') and len(boxes.cls) > i:
+                            class_id = int(boxes.cls[i].item()) if hasattr(boxes.cls[i], 'item') else int(boxes.cls[i])
+                            
+                            if class_id < len(class_names):
+                                class_name = class_names[class_id]
+                                
+                                # Get confidence
+                                confidence = 0.0
+                                if hasattr(boxes, 'conf') and len(boxes.conf) > i:
+                                    confidence = float(boxes.conf[i].item()) if hasattr(boxes.conf[i], 'item') else float(boxes.conf[i])
+                                
+                                # Determine color based on priority
+                                if class_name in tier1_objects:
+                                    color = "red"
+                                elif class_name in tier2_objects:
+                                    color = "orange"
+                                elif class_name in tier3_objects:
+                                    color = "blue"
+                                else:
+                                    color = "green"
+                                
+                                # Draw bounding box
+                                draw.rectangle([x1, y1, x2, y2], outline=color, width=3)
+                                
+                                # Draw label background
+                                label = f"{class_name}: {confidence:.2f}"
+                                bbox = draw.textbbox((x1, y1-20), label)
+                                draw.rectangle(bbox, fill=color)
+                                
+                                # Draw label text
+                                draw.text((x1+2, y1-18), label, fill="white")
+                
+                except Exception as box_error:
+                    print(f"Error processing individual box {i}: {box_error}")
+                    continue
         
         return np.array(image)
+        
     except Exception as e:
-        st.error(f"Error drawing boxes: {e}")
-        return np.array(image)
+        print(f"Error in draw_bounding_boxes: {e}")
+        # Return original image if drawing fails
+        return np.array(image) if isinstance(image, Image.Image) else image
 
 def process_detection(image):
-    """Process image and return results with priority-based messaging"""
-    if model is None or image is None:
+    """Process image and return results with robust error handling"""
+    if model is None:
         return None, "❌ Model not loaded", "No detection available"
+    
+    if image is None:
+        return None, "❌ No image provided", "No image provided"
     
     try:
         # Convert PIL to numpy array
         img_array = np.array(image)
         
-        # Run YOLO inference
-        results = model(img_array, conf=0.25)
+        # Run YOLO inference with error handling
+        results = model(img_array, conf=0.25, verbose=False)
         
-        # Draw bounding boxes using PIL (no OpenCV)
-        annotated_image = draw_bounding_boxes(img_array, results)
-        
-        # Extract detections
+        # Initialize detection variables
         detections = []
         detected_objects = set()
         
-        if results[0].boxes is not None:
-            for box in results[0].boxes:
-                class_id = int(box.cls.item())
-                confidence = float(box.conf.item())
+        # Process results with robust error handling
+        if results and len(results) > 0:
+            result = results[0]
+            
+            # Check if boxes exist and process them
+            if hasattr(result, 'boxes') and result.boxes is not None:
+                boxes = result.boxes
                 
-                if class_id < len(class_names):
-                    class_name = class_names[class_id]
-                    detected_objects.add(class_name)
-                    detections.append({
-                        'class': class_name,
-                        'confidence': confidence
-                    })
+                # Handle both tensor and direct access
+                try:
+                    if hasattr(boxes, 'cls') and boxes.cls is not None:
+                        num_detections = len(boxes.cls)
+                        
+                        for i in range(num_detections):
+                            try:
+                                # Get class ID
+                                class_id = int(boxes.cls[i].item()) if hasattr(boxes.cls[i], 'item') else int(boxes.cls[i])
+                                
+                                # Get confidence
+                                confidence = 0.0
+                                if hasattr(boxes, 'conf') and len(boxes.conf) > i:
+                                    confidence = float(boxes.conf[i].item()) if hasattr(boxes.conf[i], 'item') else float(boxes.conf[i])
+                                
+                                # Validate class ID
+                                if 0 <= class_id < len(class_names):
+                                    class_name = class_names[class_id]
+                                    detected_objects.add(class_name)
+                                    
+                                    detections.append({
+                                        'class': class_name,
+                                        'confidence': confidence
+                                    })
+                                    
+                            except Exception as detection_error:
+                                print(f"Error processing detection {i}: {detection_error}")
+                                continue
+                                
+                except Exception as boxes_error:
+                    print(f"Error accessing boxes: {boxes_error}")
         
-        # Generate priority-based audio message
+        # Draw annotations
+        annotated_image = draw_bounding_boxes(img_array, results)
+        
+        # Generate messages
         audio_message = generate_audio_message(detected_objects)
-        
-        # Format detailed results
         detailed_results = format_detection_results(detections)
         
         return annotated_image, audio_message, detailed_results
         
     except Exception as e:
-        return image, f"❌ Error: {str(e)}", "Processing failed"
+        error_msg = f"Processing error: {str(e)}"
+        print(f"Full error in process_detection: {e}")
+        return np.array(image), f"❌ Error: {error_msg}", f"Error: {error_msg}"
 
 def generate_audio_message(detected_objects):
     """Generate priority-based audio announcement"""
@@ -237,7 +300,8 @@ def main():
             
             # Display results
             if annotated_image is not None:
-                st.image(annotated_image, caption="Detection Results", use_column_width=True)
+                # FIXED: use_container_width instead of use_column_width
+                st.image(annotated_image, caption="Detection Results", use_container_width=True)
                 
                 # Audio message (priority-based)
                 st.header("🔊 Navigation Announcement")
