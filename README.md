@@ -1,4 +1,3 @@
-cat > README.md << 'EOF'
 # 🔍 Nexus Vision - Smart Navigation Assistant
 
 ![Nexus Vision](https://img.shields.io/badge/Nexus%20Vision-AI%20Navigation-blue?style=for-the-badge&logo=eye&logoColor=white)
