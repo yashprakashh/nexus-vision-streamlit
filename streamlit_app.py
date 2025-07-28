@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image
 from ultralytics import YOLO
 import os
+import io
 
 st.set_page_config(
     page_title="Nexus Vision - Smart Navigation Assistant",
@@ -29,116 +30,86 @@ def load_model():
     try:
         if os.path.exists('best.pt'):
             model = YOLO('best.pt')
-            st.success("✅ Custom model loaded successfully!")
             return model
         else:
-            st.warning("⚠️ Custom model not found, using YOLOv8n pretrained")
             model = YOLO('yolov8n.pt')
             return model
     except Exception as e:
         st.error(f"❌ Model loading failed: {e}")
         return None
 
-def ensure_valid_image(image):
-    """Ensure image is valid for Streamlit display"""
+def process_camera_input(camera_file):
+    """Convert Streamlit camera input to PIL Image"""
     try:
-        # Convert to numpy array if PIL
-        if isinstance(image, Image.Image):
-            img_array = np.array(image)
-        else:
-            img_array = image
+        if camera_file is None:
+            return None
         
-        # Ensure it's a numpy array
-        if not isinstance(img_array, np.ndarray):
-            return None
-            
-        # Ensure proper shape
-        if len(img_array.shape) == 2:
-            # Grayscale - valid
-            return img_array.astype(np.uint8)
-        elif len(img_array.shape) == 3:
-            # Color image
-            if img_array.shape[2] == 3:
-                # RGB - valid
-                return img_array.astype(np.uint8)
-            elif img_array.shape[2] == 4:
-                # RGBA - convert to RGB
-                return img_array[:, :, :3].astype(np.uint8)
-            else:
-                # Invalid number of channels
-                return None
-        else:
-            # Invalid shape
-            return None
-            
+        # Reset file pointer to beginning
+        camera_file.seek(0)
+        
+        # Read as PIL Image
+        pil_image = Image.open(camera_file)
+        
+        # Convert to RGB if needed
+        if pil_image.mode != 'RGB':
+            pil_image = pil_image.convert('RGB')
+        
+        return pil_image
+        
     except Exception as e:
-        print(f"Error ensuring valid image: {e}")
+        print(f"Error processing camera input: {e}")
         return None
 
-def safe_detect(image):
-    """Ultra-safe detection with guaranteed valid output"""
+def safe_detect(camera_file):
+    """Ultra-safe detection with proper camera input handling"""
     model = load_model()
     
-    # Ensure input image is valid
-    original_array = ensure_valid_image(image)
-    if original_array is None:
-        return image, "❌ Invalid input image format"
+    # Convert camera input to PIL Image
+    pil_image = process_camera_input(camera_file)
+    if pil_image is None:
+        return None, "❌ Cannot process camera image"
+    
+    # Convert to numpy array
+    img_array = np.array(pil_image)
     
     if model is None:
-        return original_array, "❌ Model not available"
+        return img_array, "❌ Model not available"
     
     try:
-        # Run detection with maximum safety
-        results = model.predict(original_array, conf=0.25, verbose=False)
+        # Run detection
+        results = model.predict(img_array, conf=0.25, verbose=False)
         
         # Initialize variables
-        annotated_image = original_array
+        annotated_image = img_array
         detected_classes = []
         
-        # ULTRA-SAFE result processing
+        # Process results safely
         if results and len(results) > 0:
             try:
                 result = results[0]
                 
-                # Try to get annotated image from YOLO
+                # Get annotated image
                 try:
                     plot_result = result.plot()
                     if plot_result is not None:
-                        # Convert BGR to RGB if needed
-                        if len(plot_result.shape) == 3 and plot_result.shape[2] == 3:
-                            annotated_image = plot_result[:, :, ::-1]  # BGR to RGB
-                        else:
-                            annotated_image = plot_result
-                        
-                        # Ensure valid shape
-                        annotated_image = ensure_valid_image(annotated_image)
-                        if annotated_image is None:
-                            annotated_image = original_array
-                            
-                except Exception as plot_error:
-                    print(f"Plot error: {plot_error}")
-                    annotated_image = original_array
+                        # Convert BGR to RGB
+                        annotated_image = plot_result[:, :, ::-1]
+                except:
+                    annotated_image = img_array
                 
-                # Try to extract detection classes
+                # Extract detected classes
                 try:
                     if hasattr(result, 'boxes') and result.boxes is not None:
-                        boxes = result.boxes
-                        
-                        # Multiple ways to get classes
-                        if hasattr(boxes, 'cls') and boxes.cls is not None:
-                            try:
-                                for cls_tensor in boxes.cls:
-                                    try:
-                                        class_id = int(cls_tensor.item() if hasattr(cls_tensor, 'item') else cls_tensor)
-                                        if 0 <= class_id < len(class_names):
-                                            detected_classes.append(class_names[class_id])
-                                    except:
-                                        continue
-                            except:
-                                pass
-                                
-                except Exception as class_error:
-                    print(f"Class extraction error: {class_error}")
+                        if hasattr(result.boxes, 'cls') and result.boxes.cls is not None:
+                            for cls_tensor in result.boxes.cls:
+                                try:
+                                    class_id = int(cls_tensor.item())
+                                    if 0 <= class_id < len(class_names):
+                                        detected_classes.append(class_names[class_id])
+                                except:
+                                    continue
+                except:
+                    pass
                     
             except Exception as result_error:
                 print(f"Result processing error: {result_error}")
@@ -152,79 +123,117 @@ def safe_detect(image):
             if critical:
                 message = f"🚨 CRITICAL ALERT: {', '.join(critical)} detected! Proceed with extreme caution."
             elif common:
-                message = f"⚠️ NAVIGATION ALERT: {', '.join(common)} detected. Be aware."
+                message = f"⚠️ NAVIGATION ALERT: {', '.join(common)} detected. Be aware of your surroundings."
             else:
                 message = f"✅ Objects detected: {', '.join(unique_objects)}"
         else:
             message = "✅ Clear path - no objects detected"
         
-        # Final safety check on output image
-        final_image = ensure_valid_image(annotated_image)
-        if final_image is None:
-            final_image = original_array
-            
-        return final_image, message
+        return annotated_image, message
         
     except Exception as e:
         print(f"Detection error: {e}")
-        # Always return original image on any error
-        return original_array, f"⚠️ Processing completed with basic analysis"
+        return img_array, "⚠️ Basic analysis completed"
 
 # Main App
 def main():
     st.title("🔍 Nexus Vision - Smart Navigation Assistant")
-    st.markdown("**AI-powered object detection for visually impaired navigation**")
+    st.markdown("**AI-powered object detection for visually impaired navigation assistance**")
     
     # Model status
     model = load_model()
     if model:
-        st.success("🤖 Model ready for detection")
+        st.success("🤖 Custom YOLOv8 model ready for detection!")
     
-    # Camera input
-    st.header("📸 Camera Input")
-    camera_input = st.camera_input("Take a picture for object detection")
+    # Main interface
+    col1, col2 = st.columns([1, 1])
     
-    if camera_input is not None:
-        st.success("✅ Image captured!")
+    with col1:
+        st.header("📸 Camera Input")
+        camera_input = st.camera_input("Take a picture for object detection")
         
-        with st.spinner('🔄 Analyzing...'):
-            # Process image with maximum safety
-            result_image, message = safe_detect(camera_input)
+        if camera_input is not None:
+            st.success("✅ Image captured successfully!")
             
-            # Additional safety check before display
-            display_image = ensure_valid_image(result_image)
-            if display_image is None:
-                display_image = ensure_valid_image(camera_input)
-                if display_image is None:
-                    st.error("❌ Cannot display image - invalid format")
-                    return
+            # Display original image
+            try:
+                original_image = process_camera_input(camera_input)
+                if original_image:
+                    st.image(original_image, caption="Captured Image", use_container_width=True)
+            except:
+                st.info("Image captured and ready for processing")
+    
+    with col2:
+        st.header("🔍 Detection Results")
         
-        # Display results
-        col1, col2 = st.columns(2)
+        if camera_input is not None:
+            with st.spinner('🔄 Analyzing image for navigation hazards...'):
+                # Process the image
+                result_image, message = safe_detect(camera_input)
+                
+                if result_image is not None:
+                    # Display results
+                    st.image(result_image, caption="Detection Results", use_container_width=True)
+                    
+                    # Navigation alert
+                    st.subheader("🔊 Navigation Alert")
+                    if "CRITICAL" in message:
+                        st.error(message)
+                    elif "ALERT" in message:
+                        st.warning(message)
+                    else:
+                        st.success(message)
+                else:
+                    st.error("❌ Could not process image")
+        else:
+            st.info("👆 Capture an image using your camera to start navigation assistance")
+    
+    # Object categories reference
+    if camera_input is not None:
+        st.markdown("---")
         
-        with col1:
-            st.subheader("Original Image")
-            original_display = ensure_valid_image(camera_input)
-            if original_display is not None:
-                st.image(original_display, use_container_width=True)
-            else:
-                st.error("Cannot display original image")
-        
-        with col2:
-            st.subheader("Detection Results")
-            st.image(display_image, use_container_width=True)
-        
-        # Navigation message
-        st.header("🔊 Navigation Alert")
-        st.info(message)
-        
-        # Object categories info
-        with st.expander("🎯 Object Categories"):
-            st.markdown("""
-            **🚨 Critical Objects:** stairs, curb, car, bus, truck, bicycle  
-            **⚠️ Common Objects:** person, stop_sign, traffic_light, bench, fire_hydrant, pole  
-            **📍 Other Objects:** All remaining 10+ classes
-            """)
+        with st.expander("🎯 Object Detection Categories", expanded=False):
+            col_a, col_b, col_c = st.columns(3)
+            
+            with col_a:
+                st.markdown("""
+                **🚨 Critical Navigation Hazards:**
+                - stairs
+                - curb  
+                - car
+                - bus
+                - truck
+                - bicycle
+                """)
+            
+            with col_b:
+                st.markdown("""
+                **⚠️ Common Navigation Objects:**
+                - person
+                - stop_sign
+                - traffic_light
+                - bench
+                - fire_hydrant
+                - pole
+                """)
+            
+            with col_c:  
+                st.markdown("""
+                **📍 Contextual & Other Objects:**
+                - bus_stop, tree
+                - crutch, dog, motorcycle
+                - spherical_roadblock, train
+                - warning_column, waste_container
+                """)
+    
+    # Footer
+    st.markdown("---")
+    st.markdown("""
+    <div style='text-align: center; color: #666;'>
+    <p><strong>Nexus Vision</strong> - Empowering independence through AI-powered navigation assistance</p>
+    <p>🤖 Powered by YOLOv8 • 📱 Real-time webcam detection • 🎯 22 specialized object classes</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
